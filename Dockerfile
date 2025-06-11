@@ -1,0 +1,61 @@
+# Copyright (c) 2021-2022 Cisco Systems, Inc. and others.
+# All rights reserved.
+FROM openbmp/dev-image:latest AS build
+
+ARG VERSION=0.0.0
+
+COPY obmp-psql/ /ws
+COPY obmp-java-api-message/ /tmp/obmp-java-api-message
+WORKDIR /ws
+
+RUN cd /tmp/obmp-java-api-message \
+    && mvn clean install \
+    && cd /ws \
+    && mvn clean package
+
+FROM openjdk:17-slim
+
+# Copy files from previous stages
+COPY --from=build /ws/target/obmp-psql-consumer-0.1.0-SNAPSHOT.jar /usr/local/openbmp/obmp-psql-consumer.jar
+COPY --from=build /ws/database/  /usr/local/openbmp/database
+COPY  --chmod=755 --from=build /ws/cron_scripts/gen-whois/*.py /usr/local/openbmp/
+COPY  --chmod=755 --from=build /ws/cron_scripts/peeringdb/*.py /usr/local/openbmp/
+COPY  --chmod=755 --from=build /ws/cron_scripts/rpki/*.py /usr/local/openbmp/
+COPY  --chmod=755 --from=build /ws/scripts/geo-csv-to-psql.py /usr/local/openbmp/
+COPY  --chmod=755 --from=build /ws/scripts/db-ip-import.sh /usr/local/openbmp/
+
+# Add files
+ADD  --chmod=755 obmp-docker/psql-app/scripts/run /usr/sbin/
+COPY --chmod=755 obmp-docker/psql-app/upgrade /tmp/upgrade
+
+# Define persistent data volumes
+VOLUME ["/config"]
+
+# Consumer JMX console
+EXPOSE 9005
+
+# Define working directory.
+WORKDIR /tmp
+
+# Base setup tasks
+RUN touch /usr/local/version-${VERSION} \
+    && chmod 755 /usr/local/openbmp/*.py
+
+# Install depends
+RUN apt-get update \
+    && apt-get install --allow-unauthenticated -y unzip curl wget whois vim rsyslog cron rsync kafkacat \
+        procps python3-minimal python3-distutils python3-psycopg2  python3-dnspython postgresql-client \
+    && ln -s /usr/bin/python3 /usr/bin/python
+
+RUN cd /tmp && curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+    && python3 get-pip.py
+
+RUN pip install ipaddr pykafka click netaddr
+
+RUN pip3 install urllib3 requests
+
+# Cleanup
+RUN apt-get autoremove && apt-get clean
+
+# Define default command.
+CMD ["/usr/sbin/run"]
