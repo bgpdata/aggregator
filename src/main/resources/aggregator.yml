@@ -3,8 +3,10 @@
 base:
 
   # Interval at which the customer statistics should be printed/logged
-  stats_interval: 300
+  stats_interval: 60
 
+  # Number of consumer threads
+  consumer_threads: 8
 
   # In minutes; The maximum age between received collector heartbeats.
   #     The collector sends heatbeat messages every interval.  This
@@ -29,7 +31,7 @@ base:
   #    the high threshold mark.  If queue is above threshold for a consecutive
   #    writer_allowed_over_queue_times value, a new thread will be added for
   #    the writer type, providing it isn't already at max threads (per type).
-  writer_allowed_over_queue_times: 2
+  writer_allowed_over_queue_times: 8
 
   # Number of seconds the writer needs to sustain below the low queue threshold mark
   #     in order to trigger scaling back the number of threads in use.  Only one thread
@@ -40,33 +42,40 @@ base:
 
   # Number of seconds between rebalacing of writer threads
   #    Rebalance will drain writer queues at this interval if at least one writer is above threshold
-  writer_rebalance_seconds: 600
+  writer_rebalance_seconds: 900
 
   # Maximum input queue size
-  #   Normally within the range of 10000 - 50000 is enough
-  writer_queue_size: 30000
+  #   Normally within the range of 1000 - 20000 is enough
+  writer_queue_size: 4000
 
   # Maximum input queue size for the consumer
   #   A good starting size is 2 times the size of the writer queue size
-  consumer_queue_size: 60000
+  consumer_queue_size: 10000
 
 postgres:
-  #host    : "localhost:5432"
-  host    : "db.tim.syd.infra.webex.com:5432"
+
+  # NOTE: host, db_name, username, password, ssl_enable and ssl_mode will be overwritten via docker ENV settings
+  host    : "localhost:5432"
   db_name : "bgpdata"
   username: "bgpdata"
   password: "bgpdata"
 
+  # Set to false to disable SSL
+  ssl_enable: true
+
+  # See https://jdbc.postgresql.org/documentation/documentation.html for configuring sslmode
+  ssl_mode: "require"
 
   # The number of statements or records to batch in a single bulk update/insert/delete
   #   NOTE: It's more efficient to have more threads with a low batch size
-  batch_records: 300
+  batch_records: 3000
 
   # The time in milliseconds to wait for batching records in a bulk update/insert/delete
-  batch_time_millis: 100
+  #  Note this will state compress records in this time period.
+  batch_time_millis: 300
 
   # The number of times to retry a statement
-  retries: 10
+  retries: 6
 
 kafka:
 
@@ -76,10 +85,10 @@ kafka:
   #   uses boolean value, make sure to double quote "true" and "false" so that they are
   #   strings, not of type boolean.
   consumer_config:
-    bootstrap.servers: "kafka.tim.syd.infra.webex.com:9092"
+    bootstrap.servers: "localhost:9092"
 
-    group.id  : "aggregator-tim-17"
-    client.id : "aggregator-tim"
+    group.id  : "aggregator-consumer"
+    client.id : "aggregator-consumer"
 
     session.timeout.ms: 15000
     heartbeat.interval.ms: 5000
@@ -102,12 +111,12 @@ kafka:
   #     example router and peer, so that peer level state changes are handled first
   #     when starting the consumer.  This is why we introduce a delay between subscriptions.
   subscribe_topic_patterns:
-#    - "bgpdata[.]parsed[.]collector"
-#    - "bgpdata[.]parsed[.]router"
-#    - "bgpdata[.]parsed[.]peer"
+    - "bgpdata[.]parsed[.]collector"
+    - "bgpdata[.]parsed[.]router"
+    - "bgpdata[.]parsed[.]peer"
     - "bgpdata[.]parsed[.]ls.*"
     #- "bgpdata[.]parsed[.]bmp_stat"
-#    - "bgpdata[.]parsed[.]base_attribute"
-    #- "bgpdata[.]parsed[.]l3vpn"
-#    - "bgpdata[.]parsed[.]unicast_prefix"
+    - "bgpdata[.]parsed[.]base_attribute"
+    - "bgpdata[.]parsed[.]l3vpn"
+    - "bgpdata[.]parsed[.]unicast_prefix"
 

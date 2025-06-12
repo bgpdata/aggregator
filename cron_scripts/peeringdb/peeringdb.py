@@ -451,13 +451,13 @@ class apiDb:
               metavar="<string>", default="localhost")
 @click.option('-u', '--pguser', 'pguser', envvar='PGUSER',
               help="Postgres User",
-              metavar="<string>", default="openbmp")
+              metavar="<string>", default="bgpdata")
 @click.option('-p', '--pgpassword', 'pgpassword', envvar='PGPASSWORD',
               help="Postgres Password",
-              metavar="<string>", default="openbmp")
+              metavar="<string>", default="bgpdata")
 @click.option('-d', '--pgdatabase', 'pgdatabase', envvar='PGDATABASE',
               help="Postgres Database name",
-              metavar="<string>", default="openbmp")
+              metavar="<string>", default="bgpdata")
 @click.option('-s', '--sleep', 'sleep_secs',
               help="Randomly sleep to delay connections to peeringdb (default 600)",
               metavar="<int>", default="600")

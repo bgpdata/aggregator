@@ -5,7 +5,7 @@
 #
 # Author: Tim Evens <tievens@cisco.com>
 #
-source /usr/local/openbmp/pg_profile
+source /usr/local/bgpdata/pg_profile
 
 rm -f /tmp/dbip.csv.gz /tmp/dbip.csv
 
@@ -18,7 +18,7 @@ if [[ $? == 0 ]]; then
     gzip -d /tmp/dbip.csv.gz
 
     echo "Running geo csv import script"
-    /usr/local/openbmp/geo-csv-to-psql.py --db_ip_file /tmp/dbip.csv
+    /usr/local/bgpdata/geo-csv-to-psql.py --db_ip_file /tmp/dbip.csv
 else
     echo "ERROR: Failed to download dbip-city-lite-2022-06.csv.gz"
     exit 1

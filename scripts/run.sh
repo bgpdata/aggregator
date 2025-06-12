@@ -7,11 +7,11 @@
 #
 
 # Postgres details - Can be set using docker -e
-export POSTGRES_USER=${POSTGRES_USER:="openbmp"}
-export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:="openbmp"}
+export POSTGRES_USER=${POSTGRES_USER:="bgpdata"}
+export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:="bgpdata"}
 export POSTGRES_HOST=${POSTGRES_HOST:="127.0.0.1"}
 export POSTGRES_PORT=${POSTGRES_PORT:="5432"}
-export POSTGRES_DB=${POSTGRES_DB:="openbmp"}
+export POSTGRES_DB=${POSTGRES_DB:="bgpdata"}
 export POSTGRES_SSL_ENABLE=${POSTGRES_SSL_ENABLE:="true"}
 export POSTGRES_SSL_MODE=${POSTGRES_SSL_MODE:="require"}
 export MEM=${MEM:="1"}                          # mem in gigabytes
@@ -41,9 +41,9 @@ check_kafka() {
         exit 1
     fi
 
-    echo "testing" | timeout 5 kafkacat -b $KAFKA_FQDN -P -t openbmp.parsed.test
+    echo "testing" | timeout 5 kafkacat -b $KAFKA_FQDN -P -t bgpdata.parsed.test
     echo "===> Checking if we can successfully consume messages"
-    timeout 5 kafkacat -u -b $KAFKA_FQDN -C -c 1 -o beginning -t openbmp.parsed.test > /dev/null
+    timeout 5 kafkacat -u -b $KAFKA_FQDN -C -c 1 -o beginning -t bgpdata.parsed.test > /dev/null
 
     if [[ $? -ne 0 ]]; then
         echo "ERROR: Failed to connect to Kafka broker, check the Kafka 'advertised.listeners' configuration."
@@ -60,11 +60,11 @@ check_kafka() {
 config_postgres_profile() {
     echo "===> Configuring PostgreSQL Shell Profile"
 
-    echo "export PGUSER=$POSTGRES_USER" > /usr/local/openbmp/pg_profile
-    echo "export PGPASSWORD=$POSTGRES_PASSWORD" >> /usr/local/openbmp/pg_profile
-    echo "export PGHOST=$POSTGRES_HOST" >> /usr/local/openbmp/pg_profile
-    echo "export PGPORT=$POSTGRES_PORT" >> /usr/local/openbmp/pg_profile
-    echo "export PGDATABASE=$POSTGRES_DB" >> /usr/local/openbmp/pg_profile
+    echo "export PGUSER=$POSTGRES_USER" > /usr/local/bgpdata/pg_profile
+    echo "export PGPASSWORD=$POSTGRES_PASSWORD" >> /usr/local/bgpdata/pg_profile
+    echo "export PGHOST=$POSTGRES_HOST" >> /usr/local/bgpdata/pg_profile
+    echo "export PGPORT=$POSTGRES_PORT" >> /usr/local/bgpdata/pg_profile
+    echo "export PGDATABASE=$POSTGRES_DB" >> /usr/local/bgpdata/pg_profile
 }
 
 # -----------------------------------------------
@@ -91,7 +91,7 @@ initdb_postgres() {
       echo " ===> Loading Schemas"
 
       echo "------" > /var/log/db_schema_load.log
-      for file in $(ls -v /usr/local/openbmp/database/*.sql); do
+      for file in $(ls -v /usr/local/bgpdata/database/*.sql); do
         echo " ===[ $file ] ========================================" >> /var/log/db_schema_load.log
         psql < $file >> /var/log/db_schema_load.log  2>&1
       done
@@ -118,11 +118,11 @@ update_hosts() {
 enable_rpki() {
     echo "===> Enabling RPKI"
 
-    cat > /etc/cron.d/openbmp-rpki <<SETVAR
+    cat > /etc/cron.d/bgpdata-rpki <<SETVAR
 MAILTO=""
 
 # Update RPKI
-31 */2 * * *	root  . /usr/local/openbmp/pg_profile && /usr/local/openbmp/rpki_validator.py -u $PGUSER -p $PGPASSWORD -s $RPKI_URL --rpkipassword $RPKI_PASS --rpkiuser $RPKI_USER $PGHOST > /var/log/cron-rpki-import.log
+31 */2 * * *	root  . /usr/local/bgpdata/pg_profile && /usr/local/bgpdata/rpki_validator.py -u $PGUSER -p $PGPASSWORD -s $RPKI_URL --rpkipassword $RPKI_PASS --rpkiuser $RPKI_USER $PGHOST > /var/log/cron-rpki-import.log
 
 SETVAR
 
@@ -134,16 +134,16 @@ SETVAR
 enable_dbip() {
     echo "===> Enabling DB-IP Import"
 
-    cat > /etc/cron.d/openbmp-dbip <<SETVAR
+    cat > /etc/cron.d/bgpdata-dbip <<SETVAR
 MAILTO=""
 
-$(( $RANDOM % 59 + 1 )) $(( $RANDOM % 23 + 1 )) 1 * *	root  /usr/local/openbmp/db-ip-import.sh 2>&1 > /var/log/cron-dbip-import.log
+$(( $RANDOM % 59 + 1 )) $(( $RANDOM % 23 + 1 )) 1 * *	root  /usr/local/bgpdata/db-ip-import.sh 2>&1 > /var/log/cron-dbip-import.log
 
 SETVAR
 
     # Load DB-IP on start
     echo "Running DB-IP Import"
-   /usr/local/openbmp/db-ip-import.sh 2>/var/log/cron-dbip-import.log > /var/log/cron-dbip-import.log &
+   /usr/local/bgpdata/db-ip-import.sh 2>/var/log/cron-dbip-import.log > /var/log/cron-dbip-import.log &
 }
 
 
@@ -153,47 +153,47 @@ SETVAR
 enable_irr() {
     echo "===> Enabling IRR"
 
-    cat > /etc/cron.d/openbmp-irr <<SETVAR
+    cat > /etc/cron.d/bgpdata-irr <<SETVAR
 MAILTO=""
 
 # Update IRR
-1 1 * * *	root  . /usr/local/openbmp/pg_profile && /usr/local/openbmp/gen_whois_route.py -u $PGUSER -p $PGPASSWORD $PGHOST 2>&1 > /var/log/irr_load.log
+1 1 * * *	root  . /usr/local/bgpdata/pg_profile && /usr/local/bgpdata/gen_whois_route.py -u $PGUSER -p $PGPASSWORD $PGHOST 2>&1 > /var/log/irr_load.log
 
 SETVAR
 
     # Load IRR data
     echo "Loading IRR data"
-    /usr/local/openbmp/gen_whois_route.py -u $PGUSER -p $PGPASSWORD $PGHOST  2>/var/log/irr_load.log  > /var/log/irr_load.log &
+    /usr/local/bgpdata/gen_whois_route.py -u $PGUSER -p $PGPASSWORD $PGHOST  2>/var/log/irr_load.log  > /var/log/irr_load.log &
 }
 
 # -----------------------------------------------
 # config_cron
 # -----------------------------------------------
 config_cron() {
-    cat > /etc/cron.d/openbmp <<SETVAR
+    cat > /etc/cron.d/bgpdata <<SETVAR
 MAILTO=""
 
 # Update ASN info
-6 */2 * * *	root  . /usr/local/openbmp/pg_profile && flock -n /tmp/locks/gen_whois.lock /usr/local/openbmp/gen_whois_asn.py -u $PGUSER -p $PGPASSWORD $PGHOST > /var/log/asn_load.log 2>&1
-5 1,12 * * *	root  . /usr/local/openbmp/pg_profile && flock -n /tmp/locks/peeringdb.lock /usr/local/openbmp/peeringdb.py > /var/log/cron-peeringdb.log 2>&1
+6 */2 * * *	root  . /usr/local/bgpdata/pg_profile && flock -n /tmp/locks/gen_whois.lock /usr/local/bgpdata/gen_whois_asn.py -u $PGUSER -p $PGPASSWORD $PGHOST > /var/log/asn_load.log 2>&1
+5 1,12 * * *	root  . /usr/local/bgpdata/pg_profile && flock -n /tmp/locks/peeringdb.lock /usr/local/bgpdata/peeringdb.py > /var/log/cron-peeringdb.log 2>&1
 
 # Update aggregation table stats
-*/5 * * * *  root   . /usr/local/openbmp/pg_profile && flock -n /tmp/locks/update_chg_stats.lock psql -c "select update_chg_stats('5 minute')" > /var/log/cron-update_chg_stats.log 2>&1
-*/5 * * * *  root   . /usr/local/openbmp/pg_profile && flock -n /tmp/locks/update_l3vpn_chg_stats.lock psql -c "select update_l3vpn_chg_stats('5 minute')" > /var/log/cron-update_l3vpn_chg_stats.log 2>&1
+*/5 * * * *  root   . /usr/local/bgpdata/pg_profile && flock -n /tmp/locks/update_chg_stats.lock psql -c "select update_chg_stats('5 minute')" > /var/log/cron-update_chg_stats.log 2>&1
+*/5 * * * *  root   . /usr/local/bgpdata/pg_profile && flock -n /tmp/locks/update_l3vpn_chg_stats.lock psql -c "select update_l3vpn_chg_stats('5 minute')" > /var/log/cron-update_l3vpn_chg_stats.log 2>&1
 
 
 # Update peer rib counts
-*/15 * * * *	root   . /usr/local/openbmp/pg_profile && flock -n /tmp/locks/update_peer_rib_counts.lock psql -c "select update_peer_rib_counts()"  > /var/log/cron-update_peer_rib_counts.log 2>&1
+*/15 * * * *	root   . /usr/local/bgpdata/pg_profile && flock -n /tmp/locks/update_peer_rib_counts.lock psql -c "select update_peer_rib_counts()"  > /var/log/cron-update_peer_rib_counts.log 2>&1
 
 # Update peer update counts
-*/30 * * * *    root   . /usr/local/openbmp/pg_profile && flock -n /tmp/locks/update_peer_counts.lock psql -c "select update_peer_update_counts(1800)"  > /var/log/cron-update_peer_counts.log 2>&1
+*/30 * * * *    root   . /usr/local/bgpdata/pg_profile && flock -n /tmp/locks/update_peer_counts.lock psql -c "select update_peer_update_counts(1800)"  > /var/log/cron-update_peer_counts.log 2>&1
 
 # Update global rib
-*/5 * * * *	root  . /usr/local/openbmp/pg_profile && flock -n /tmp/locks/global_ip_rib.lock psql -c "select update_global_ip_rib();" > /var/log/cron-update_global_ip_rib.log 2>&1
-5 */4 * * *	root  . /usr/local/openbmp/pg_profile && flock -n /tmp/locks/global_ip_rib.lock psql -c "select purge_global_ip_rib('6 hour');" > /var/log/cron-purge_global_ip_rib.log 2>&1
+*/5 * * * *	root  . /usr/local/bgpdata/pg_profile && flock -n /tmp/locks/global_ip_rib.lock psql -c "select update_global_ip_rib();" > /var/log/cron-update_global_ip_rib.log 2>&1
+5 */4 * * *	root  . /usr/local/bgpdata/pg_profile && flock -n /tmp/locks/global_ip_rib.lock psql -c "select purge_global_ip_rib('6 hour');" > /var/log/cron-purge_global_ip_rib.log 2>&1
 
 # Update origin stats
-21 * * * *	root  . /usr/local/openbmp/pg_profile && flock -n /tmp/locks/update_origin_stats.lock psql -c "select update_origin_stats('1 hour');" > /var/log/cron-update_origin_stats.log 2>&1
+21 * * * *	root  . /usr/local/bgpdata/pg_profile && flock -n /tmp/locks/update_origin_stats.lock psql -c "select update_origin_stats('1 hour');" > /var/log/cron-update_origin_stats.log 2>&1
 
 
 SETVAR
@@ -209,28 +209,28 @@ upgrade() {
 
     if [[ ! -f /config/psql-app-upgraded.2.1.0 ]]; then
       echo "===> Upgrading to 2.1.0"
-      /tmp/upgrade/upgrade_2.1.0.sh
+      /ws/upgrade/upgrade_2.1.0.sh
       touch /config/psql-app-upgraded.2.1.0
       echo "===> Done with upgrade"
     fi
 
     if [[ ! -f /config/psql-app-upgraded.2.2.0 ]]; then
       echo "===> Upgrading to 2.2.0"
-      /tmp/upgrade/upgrade_2.2.0.sh
+      /ws/upgrade/upgrade_2.2.0.sh
       touch /config/psql-app-upgraded.2.2.0
       echo "===> Done with upgrade"
     fi
 
    if [[ ! -f /config/psql-app-upgraded.2.2.1 ]]; then
       echo "===> Upgrading to 2.2.1"
-      /tmp/upgrade/upgrade_2.2.1.sh
+      /ws/upgrade/upgrade_2.2.1.sh
       touch /config/psql-app-upgraded.2.2.1
       echo "===> Done with upgrade"
     fi
 
    if [[ ! -f /config/psql-app-upgraded.2.2.2 ]]; then
       echo "===> Upgrading to 2.2.2"
-      /tmp/upgrade/upgrade_2.2.2.sh
+      /ws/upgrade/upgrade_2.2.2.sh
       touch /config/psql-app-upgraded.2.2.2
       echo "===> Done with upgrade"
     fi
@@ -250,25 +250,25 @@ upgrade() {
 run_consumer() {
     echo "===> Starting consumer"
 
-    if [[ ! -f /config/obmp-psql.yml ]]; then
+    if [[ ! -f /config/aggregator.yml ]]; then
         cd /config
-        unzip /usr/local/openbmp/obmp-psql-consumer.jar obmp-psql.yml
+        unzip /usr/local/bgpdata/aggregator-consumer.jar aggregator.yml
 
 
-        if [[ ! -f /config/obmp-psql.yml ]]; then
-            echo "ERROR: Cannot create /config/obmp-psql.yml"
+        if [[ ! -f /config/aggregator.yml ]]; then
+            echo "ERROR: Cannot create /config/aggregator.yml"
             echo "       Update permissions on /config volume to 7777 OR add configuration file to /config volume"
             exit 1
         fi
 
          # Update configuration
-        sed -i -e "s/\([ ]*bootstrap.servers:\)\(.*\)/\1 \"${KAFKA_FQDN}\"/" /config/obmp-psql.yml
-        sed -i -e "s/\([ ]*host[ ]*:\)\(.*\)/\1 \"${POSTGRES_HOST}:${POSTGRES_PORT}\"/" /config/obmp-psql.yml
-        sed -i -e "s/\([ ]*username[ ]*:\)\(.*\)/\1 \"${POSTGRES_USER}\"/" /config/obmp-psql.yml
-        sed -i -e "s/\([ ]*password[ ]*:\)\(.*\)/\1 \"${POSTGRES_PASSWORD}\"/" /config/obmp-psql.yml
-        sed -i -e "s/\([ ]*db_name[ ]*:\)\(.*\)/\1 \"${POSTGRES_DB}\"/" /config/obmp-psql.yml
-        sed -i -e "s/\([ ]*ssl_enable[ ]*:\)\(.*\)/\1 \"${POSTGRES_SSL_ENABLE}\"/" /config/obmp-psql.yml
-        sed -i -e "s/\([ ]*ssl_mode[ ]*:\)\(.*\)/\1 \"${POSTGRES_SSL_MODE}\"/" /config/obmp-psql.yml
+        sed -i -e "s/\([ ]*bootstrap.servers:\)\(.*\)/\1 \"${KAFKA_FQDN}\"/" /config/aggregator.yml
+        sed -i -e "s/\([ ]*host[ ]*:\)\(.*\)/\1 \"${POSTGRES_HOST}:${POSTGRES_PORT}\"/" /config/aggregator.yml
+        sed -i -e "s/\([ ]*username[ ]*:\)\(.*\)/\1 \"${POSTGRES_USER}\"/" /config/aggregator.yml
+        sed -i -e "s/\([ ]*password[ ]*:\)\(.*\)/\1 \"${POSTGRES_PASSWORD}\"/" /config/aggregator.yml
+        sed -i -e "s/\([ ]*db_name[ ]*:\)\(.*\)/\1 \"${POSTGRES_DB}\"/" /config/aggregator.yml
+        sed -i -e "s/\([ ]*ssl_enable[ ]*:\)\(.*\)/\1 \"${POSTGRES_SSL_ENABLE}\"/" /config/aggregator.yml
+        sed -i -e "s/\([ ]*ssl_mode[ ]*:\)\(.*\)/\1 \"${POSTGRES_SSL_MODE}\"/" /config/aggregator.yml
     fi
 
     heap_mem=${MEM}G
@@ -280,8 +280,8 @@ run_consumer() {
          -XX:MaxGCPauseMillis=200 -XX:ParallelGCThreads=20 -XX:ConcGCThreads=5 \
          -XX:+ExitOnOutOfMemoryError \
          -Duser.timezone=UTC \
-         -jar /usr/local/openbmp/obmp-psql-consumer.jar \
-         -cf /config/obmp-psql.yml > /var/log/psql-console.log &
+         -jar /usr/local/bgpdata/aggregator-consumer.jar \
+         -cf /config/aggregator.yml > /var/log/psql-console.log &
 
     cd /tmp
 }
@@ -304,21 +304,21 @@ check_kafka
 
 config_postgres_profile
 
-source /usr/local/openbmp/pg_profile
+source /usr/local/bgpdata/pg_profile
 
 config_cron
 
-rm -f /etc/cron.d/openbmp-rpki
+rm -f /etc/cron.d/bgpdata-rpki
 if [[ ${ENABLE_RPKI:-""} != "" && $ENABLE_RPKI == 1 ]]; then
     enable_rpki
 fi
 
-rm -f /etc/cron.d/openbmp-irr
+rm -f /etc/cron.d/bgpdata-irr
 if [[ ${ENABLE_IRR:-""} != "" && $ENABLE_IRR == 1 ]]; then
     enable_irr
 fi
 
-rm -f /etc/cron.d/openbmp-dbip
+rm -f /etc/cron.d/bgpdata-dbip
 if [[ ${ENABLE_DBIP:-""} != "" && $ENABLE_DBIP == 1 ]]; then
     enable_dbip
 fi
@@ -340,7 +340,7 @@ echo "===> Now running!!!"
 
 while [ 1 ]; do
     sleep 300
-    pgrep -f obmp-psql-consumer.jar >/dev/null 2>&1
+    pgrep -f aggregator-consumer.jar >/dev/null 2>&1
     if [[ $? != 0 ]]; then
       echo "PSQL consumer is not running, restarting in 30 seconds"
       cat /var/log/psql-console.log

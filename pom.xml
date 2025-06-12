@@ -2,17 +2,17 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.openbmp</groupId>
-    <artifactId>obmp-psql-consumer</artifactId>
+    <groupId>org.bgpdata</groupId>
+    <artifactId>aggregator-consumer</artifactId>
     <packaging>jar</packaging>
 
-    <name>obmp-psql-consumer</name>
+    <name>aggregator-consumer</name>
     <url>http://maven.apache.org</url>
 
     <properties>
         <build.number>SNAPSHOT</build.number>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <openbmp-api.version>0.1.0-SNAPSHOT</openbmp-api.version>
+        <bgpdata-api.version>0.1.0-SNAPSHOT</bgpdata-api.version>
         <kafka.version>3.0.0</kafka.version>
         <psql.version>42.3.3</psql.version>
         <jackson-yaml.version>2.10.2</jackson-yaml.version>
@@ -33,7 +33,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>org.openbmp.ConsumerApp</mainClass>
+                            <mainClass>org.bgpdata.ConsumerApp</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -128,9 +128,9 @@
 
 
         <dependency>
-	        <groupId>org.openbmp.api</groupId>
-	        <artifactId>openbmp-api-message</artifactId>
-	        <version>${openbmp-api.version}</version>
+	        <groupId>org.bgpdata.api</groupId>
+	        <artifactId>bgpdata-api-message</artifactId>
+	        <version>${bgpdata-api.version}</version>
     	</dependency>
 
     </dependencies>

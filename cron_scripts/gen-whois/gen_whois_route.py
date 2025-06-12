@@ -261,7 +261,7 @@ def parseCmdArgs(argv):
     cmd_args = {'user': None,
                 'password': None,
                 'db_host': None,
-                'db_name': "openbmp"}
+                'db_name': "bgpdata"}
 
     if (len(argv) < 3):
         usage(argv[0])
@@ -330,7 +330,7 @@ def usage(prog):
 
     print ("OPTIONAL OPTIONS:")
     print ("  -h, --help".ljust(30) + "Print this help menu")
-    print ("  -d, --dbName".ljust(30) + "Database name, default is 'openbmp'")
+    print ("  -d, --dbName".ljust(30) + "Database name, default is 'bgpdata'")
 
 
 def main():

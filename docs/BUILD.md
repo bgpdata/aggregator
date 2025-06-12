@@ -13,7 +13,7 @@ Build
 You can build from source using maven as below:
 
 
-### (1) Install openbmp-java-api-message
+### (1) Install bgpdata-java-api-message
 
     git clone https://github.com/OpenBMP/obmp-java-api-message.git
     cd obmp-java-api-message

@@ -1,0 +1,3 @@
+[submodule "messagebus"]
+	path = messagebus
+	url = git@github.com:bgpdata/messagebus.git

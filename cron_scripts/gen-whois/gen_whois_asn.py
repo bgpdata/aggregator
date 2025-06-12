@@ -429,7 +429,7 @@ def main():
     cfg = parseCmdArgs(sys.argv)
 
     db = dbHandler.dbHandler()
-    db.connectDb(cfg['user'], cfg['password'], cfg['db_host'], "openbmp")
+    db.connectDb(cfg['user'], cfg['password'], cfg['db_host'], "bgpdata")
 
     asnList = getASNList(db)
     walkWhois(db,asnList)

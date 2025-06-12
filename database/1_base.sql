@@ -119,7 +119,7 @@ CREATE TABLE users (
 	type                user_role       NOT NULL,
 	PRIMARY KEY (username)
 );
-INSERT INTO users (username,password,type) VALUES ('openbmp', 'openbmp', 'admin');
+INSERT INTO users (username,password,type) VALUES ('bgpdata', 'bgpdata', 'admin');
 
 
 -- Table structure for table collectors

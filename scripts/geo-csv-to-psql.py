@@ -382,13 +382,13 @@ def import_dbip_csv(db, in_file):
               metavar="<string>", default="localhost")
 @click.option('-u', '--pguser', 'pguser', envvar='PGUSER',
               help="Postgres User",
-              metavar="<string>", default="openbmp")
+              metavar="<string>", default="bgpdata")
 @click.option('-p', '--pgpassword', 'pgpassword', envvar='PGPASSWORD',
               help="Postgres Password",
-              metavar="<string>", default="openbmp")
+              metavar="<string>", default="bgpdata")
 @click.option('-d', '--pgdatabase', 'pgdatabase', envvar='PGDATABASE',
               help="Postgres Database name",
-              metavar="<string>", default="openbmp")
+              metavar="<string>", default="bgpdata")
 @click.option('--db_ip_file', 'db_ip_file',
               help="DB-IP CSV DB-IP City Lite filename",
               metavar="<string>", default=None)

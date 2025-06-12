@@ -1,14 +1,13 @@
 # Copyright (c) 2021-2022 Cisco Systems, Inc. and others.
 # All rights reserved.
-FROM openbmp/dev-image:latest AS build
+FROM bgpdata/base:latest AS build
 
 ARG VERSION=0.0.0
 
-COPY obmp-psql/ /ws
-COPY obmp-java-api-message/ /tmp/obmp-java-api-message
+COPY . /ws
 WORKDIR /ws
 
-RUN cd /tmp/obmp-java-api-message \
+RUN cd /ws/messagebus \
     && mvn clean install \
     && cd /ws \
     && mvn clean package
@@ -16,17 +15,16 @@ RUN cd /tmp/obmp-java-api-message \
 FROM openjdk:17-slim
 
 # Copy files from previous stages
-COPY --from=build /ws/target/obmp-psql-consumer-0.1.0-SNAPSHOT.jar /usr/local/openbmp/obmp-psql-consumer.jar
-COPY --from=build /ws/database/  /usr/local/openbmp/database
-COPY  --chmod=755 --from=build /ws/cron_scripts/gen-whois/*.py /usr/local/openbmp/
-COPY  --chmod=755 --from=build /ws/cron_scripts/peeringdb/*.py /usr/local/openbmp/
-COPY  --chmod=755 --from=build /ws/cron_scripts/rpki/*.py /usr/local/openbmp/
-COPY  --chmod=755 --from=build /ws/scripts/geo-csv-to-psql.py /usr/local/openbmp/
-COPY  --chmod=755 --from=build /ws/scripts/db-ip-import.sh /usr/local/openbmp/
+COPY --from=build /ws/target/aggregator-consumer-0.1.0-SNAPSHOT.jar /usr/local/bgpdata/aggregator-consumer.jar
+COPY --from=build /ws/database/  /usr/local/bgpdata/database
+COPY  --chmod=755 --from=build /ws/cron_scripts/gen-whois/*.py /usr/local/bgpdata/
+COPY  --chmod=755 --from=build /ws/cron_scripts/peeringdb/*.py /usr/local/bgpdata/
+COPY  --chmod=755 --from=build /ws/cron_scripts/rpki/*.py /usr/local/bgpdata/
+COPY  --chmod=755 --from=build /ws/scripts/geo-csv-to-psql.py /usr/local/bgpdata/
+COPY  --chmod=755 --from=build /ws/scripts/db-ip-import.sh /usr/local/bgpdata/
 
 # Add files
-ADD  --chmod=755 obmp-docker/psql-app/scripts/run /usr/sbin/
-COPY --chmod=755 obmp-docker/psql-app/upgrade /tmp/upgrade
+COPY  --chmod=755 scripts/run.sh /usr/sbin/run
 
 # Define persistent data volumes
 VOLUME ["/config"]
@@ -39,7 +37,7 @@ WORKDIR /tmp
 
 # Base setup tasks
 RUN touch /usr/local/version-${VERSION} \
-    && chmod 755 /usr/local/openbmp/*.py
+    && chmod 755 /usr/local/bgpdata/*.py
 
 # Install depends
 RUN apt-get update \

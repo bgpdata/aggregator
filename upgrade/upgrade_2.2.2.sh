@@ -6,10 +6,10 @@
 # Author: Tim Evens <tim@evensweb.com>
 #
 
-source /usr/local/openbmp/pg_profile
+source /usr/local/bgpdata/pg_profile
 
 echo "==> Upgrading to 2.2.2 SQL ==================================== "
-psql < /tmp/upgrade/upgrade_2.2.2.sql
+psql < /ws/upgrade/upgrade_2.2.2.sql
 echo "==> Done upgrading to 2.2.2 SQL ================================== "
 
 

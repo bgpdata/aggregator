@@ -11,14 +11,8 @@ import dbHandler
 import json
 import urllib3
 import requests
-
 import ipaddr
 from time import time
-
-# ----------------------------------------------------------------
-# Global variables
-# ----------------------------------------------------------------
-
 
 # ----------------------------------------------------------------
 # Functions
@@ -92,7 +86,7 @@ def parseCmdArgs(argv):
     cmd_args = { 'user': None,
                  'password': None,
                  'db_host': None,
-                 'db_name': "openbmp",
+                 'db_name': "bgpdata",
                  'server': None,
                  'rpkiuser': None,
                  'rpkipassword': None,
@@ -180,7 +174,7 @@ def usage(prog):
 
     print ("OPTIONAL OPTIONS:")
     print ("  -h, --help".ljust(30) + "Print this help menu")
-    print ("  -d, --dbName".ljust(30) + "Database name, default is 'openbmp'")
+    print ("  -d, --dbName".ljust(30) + "Database name, default is 'bgpdata'")
     print ("  -y, --rpkiuser".ljust(30) + "RPKI server username if needed" )
     print ("  -z, --rpkipassword".ljust(30) + "RPKI server password if needed" )
 
