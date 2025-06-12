@@ -138,7 +138,7 @@ class apiDb:
             return resp_dict
 
         except requests.exceptions.ConnectionError as err:
-            logger.error(f"Failed to connect to peeirngdb.com: {err}")
+            logger.error(f"Failed to connect to peeringdb.com: {err}")
             return None
 
     def get_nets(self):

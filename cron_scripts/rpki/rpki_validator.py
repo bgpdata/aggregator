@@ -27,18 +27,16 @@ def load_export(db, server, rpkiuser, rpkipassword):
 
     try:
         if (rpkipassword == 'None') or (rpkipassword == None):
-            req = requests.get(server, verify=False ).content.decode('utf-8')
+            req = requests.get(server, verify=False).content.decode('utf-8')
         else:
             req = requests.get(server, verify=False, auth=(rpkiuser,rpkipassword)).content.decode('utf-8')
 
-
-        #print(req.content)
         json_response = json.loads(req)
-        data = json_response['roas'] # json
+        data = json_response['roas']
 
     except requests.exceptions.RequestException as e:
-        print ("Error connecting to rpki server: %r") % err
-        return 
+        print(f"Error connecting to rpki server: {e}")
+        return
 
     query = query_begin
     count = 0
