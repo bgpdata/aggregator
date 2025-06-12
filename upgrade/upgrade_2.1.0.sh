@@ -16,7 +16,7 @@ if [[ $? -ne 0 ]]; then
   echo "==> Done upgrading L3VPN SQL ================================== "
 
   echo "==> Upgrading to 2.1.0 SQL ==================================== "
-  psql < /ws/upgrade/upgrade_2.1.0.sql
+  psql < /usr/local/bgpdata/upgrade/upgrade_2.1.0.sql
   echo "==> Done upgrading to 2.1.0 SQL ================================== "
 fi
 

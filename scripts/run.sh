@@ -209,28 +209,28 @@ upgrade() {
 
     if [[ ! -f /config/psql-app-upgraded.2.1.0 ]]; then
       echo "===> Upgrading to 2.1.0"
-      /ws/upgrade/upgrade_2.1.0.sh
+      /usr/local/bgpdata/upgrade/upgrade_2.1.0.sh
       touch /config/psql-app-upgraded.2.1.0
       echo "===> Done with upgrade"
     fi
 
     if [[ ! -f /config/psql-app-upgraded.2.2.0 ]]; then
       echo "===> Upgrading to 2.2.0"
-      /ws/upgrade/upgrade_2.2.0.sh
+      /usr/local/bgpdata/upgrade/upgrade_2.2.0.sh
       touch /config/psql-app-upgraded.2.2.0
       echo "===> Done with upgrade"
     fi
 
    if [[ ! -f /config/psql-app-upgraded.2.2.1 ]]; then
       echo "===> Upgrading to 2.2.1"
-      /ws/upgrade/upgrade_2.2.1.sh
+      /usr/local/bgpdata/upgrade/upgrade_2.2.1.sh
       touch /config/psql-app-upgraded.2.2.1
       echo "===> Done with upgrade"
     fi
 
    if [[ ! -f /config/psql-app-upgraded.2.2.2 ]]; then
       echo "===> Upgrading to 2.2.2"
-      /ws/upgrade/upgrade_2.2.2.sh
+      /usr/local/bgpdata/upgrade/upgrade_2.2.2.sh
       touch /config/psql-app-upgraded.2.2.2
       echo "===> Done with upgrade"
     fi

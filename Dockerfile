@@ -16,12 +16,13 @@ FROM openjdk:17-slim
 
 # Copy files from previous stages
 COPY --from=build /ws/target/aggregator-consumer-0.1.0-SNAPSHOT.jar /usr/local/bgpdata/aggregator-consumer.jar
-COPY --from=build /ws/database/  /usr/local/bgpdata/database
-COPY  --chmod=755 --from=build /ws/cron_scripts/gen-whois/*.py /usr/local/bgpdata/
-COPY  --chmod=755 --from=build /ws/cron_scripts/peeringdb/*.py /usr/local/bgpdata/
-COPY  --chmod=755 --from=build /ws/cron_scripts/rpki/*.py /usr/local/bgpdata/
-COPY  --chmod=755 --from=build /ws/scripts/geo-csv-to-psql.py /usr/local/bgpdata/
-COPY  --chmod=755 --from=build /ws/scripts/db-ip-import.sh /usr/local/bgpdata/
+COPY --from=build /ws/database/ /usr/local/bgpdata/database
+COPY --from=build /ws/upgrade/ /usr/local/bgpdata/upgrade
+COPY --chmod=755 --from=build /ws/cron_scripts/gen-whois/*.py /usr/local/bgpdata/
+COPY --chmod=755 --from=build /ws/cron_scripts/peeringdb/*.py /usr/local/bgpdata/
+COPY --chmod=755 --from=build /ws/cron_scripts/rpki/*.py /usr/local/bgpdata/
+COPY --chmod=755 --from=build /ws/scripts/geo-csv-to-psql.py /usr/local/bgpdata/
+COPY --chmod=755 --from=build /ws/scripts/db-ip-import.sh /usr/local/bgpdata/
 
 # Add files
 COPY  --chmod=755 scripts/run.sh /usr/sbin/run
