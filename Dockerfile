@@ -7,7 +7,7 @@ ARG VERSION=0.0.0
 COPY . /ws
 WORKDIR /ws
 
-RUN cd /ws/messagebus \
+RUN cd /ws/protocol \
     && mvn clean install \
     && cd /ws \
     && mvn clean package
@@ -39,11 +39,14 @@ WORKDIR /tmp
 RUN touch /usr/local/version-${VERSION} \
     && chmod 755 /usr/local/bgpdata/*.py
 
-# Install depends
-RUN apt-get update \
-    && apt-get install --allow-unauthenticated -y unzip curl wget whois vim rsyslog cron rsync kafkacat \
-        procps python3-minimal python3-distutils python3-psycopg2  python3-dnspython postgresql-client \
-    && ln -s /usr/bin/python3 /usr/bin/python
+# Install dependencies
+RUN apt-get update && \
+    apt-get install --allow-unauthenticated -y \
+        unzip curl wget whois vim rsyslog cron rsync kafkacat \
+        procps python3-minimal python3-distutils python3-psycopg2 \
+        python3-dnspython postgresql-client \
+        --fix-missing && \
+    ln -s /usr/bin/python3 /usr/bin/python
 
 RUN cd /tmp && curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
     && python3 get-pip.py
