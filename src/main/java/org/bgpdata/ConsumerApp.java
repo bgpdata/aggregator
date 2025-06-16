@@ -151,6 +151,8 @@ public class ConsumerApp
                                 psqlApp.consumerThreads.get(i).getLs_node_msg_count());
                         logger.info("             LS link messages: %d",
                                 psqlApp.consumerThreads.get(i).getLs_link_msg_count());
+                        logger.info("        subscription messages: %d",
+                                psqlApp.consumerThreads.get(i).getSubscription_msg_count());
                         logger.info("           LS prefix messages: %d",
                                 psqlApp.consumerThreads.get(i).getLs_prefix_msg_count());
                     }

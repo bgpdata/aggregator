@@ -86,10 +86,8 @@ kafka:
   #   strings, not of type boolean.
   consumer_config:
     bootstrap.servers: "localhost:9092"
-
     group.id  : "aggregator-consumer"
     client.id : "aggregator-consumer"
-
     session.timeout.ms: 15000
     heartbeat.interval.ms: 5000
     max.poll.interval.ms: 300000
@@ -98,11 +96,20 @@ kafka:
     max.poll.records: 1000
     fetch.max.wait.ms: 50
 
+  producer_config:
+    bootstrap.servers: "localhost:9092"
+    client.id: "aggregator-producer"
+    key.serializer: "org.apache.kafka.common.serialization.StringSerializer"
+    value.serializer: "org.apache.kafka.common.serialization.StringSerializer"
+
     # For TLS/SSL config follow Kafka consumer configuration guide for setting up SSL/TLS.
 
   # Delay in milliseconds between subscribing to topic patterns
   #    Delay is introduced between each pattern when subscribing
-  topic_subscribe_delay_millis: 15000
+  topic_subscribe_delay_millis: 10000
+
+  # Timeout in seconds for a subscription to be considered active
+  subscription_timeout_seconds: 180
 
   # List of topic patterns to subscribe to.  Pattern is always a regex, but exact
   #     topic name can be specified.
@@ -119,4 +126,4 @@ kafka:
     - "bgpdata[.]parsed[.]base_attribute"
     - "bgpdata[.]parsed[.]l3vpn"
     - "bgpdata[.]parsed[.]unicast_prefix"
-
+    - "bgpdata[.]parsed[.]subscription"

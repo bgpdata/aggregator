@@ -52,9 +52,10 @@ public class Config {
     private String db_ssl_enable = "true";
     private String db_ssl_mode = "require";
     private Properties kafka_consumer_props;
+    private Properties kafka_producer_props;
     private Set<Pattern> kafka_topic_patterns;
     private Integer topic_subscribe_delay_millis = 10000;       // topic subscription interval delay
-
+    private Integer subscription_timeout_seconds = 180;         // subscription timeout in seconds
 
 
     //Turns this class to a singleton
@@ -74,6 +75,9 @@ public class Config {
 
         kafka_consumer_props = new Properties();
         consumerConfigDefaults();
+
+        kafka_producer_props = new Properties();
+        producerConfigDefaults();
 
         kafka_topic_patterns = new LinkedHashSet<>();
     }
@@ -224,6 +228,9 @@ public class Config {
                         if (subEntry.getKey().equalsIgnoreCase("topic_subscribe_delay_millis"))
                             topic_subscribe_delay_millis = Integer.valueOf(subEntry.getValue().toString());
 
+                        else if (subEntry.getKey().equalsIgnoreCase("subscription_timeout_seconds"))
+                            subscription_timeout_seconds = Integer.valueOf(subEntry.getValue().toString());
+
                         else if (subEntry.getKey().equalsIgnoreCase("consumer_config")) {
                             /*
                              * Consumer Config
@@ -235,6 +242,18 @@ public class Config {
                                 kafka_consumer_props.setProperty(cEntry.getKey(), cEntry.getValue().toString());
                             }
 
+                        }
+
+                        else if (subEntry.getKey().equalsIgnoreCase("producer_config")) {
+                            /*
+                             * Producer Config
+                             */
+                            Map<String, Object> map = ((Map<String, Object>) subEntry.getValue());
+
+                            for (Map.Entry<String, Object> cEntry : map.entrySet()) {
+                                logger.debug("kafka producer config - key: %25s value: %s", cEntry.getKey(), cEntry.getValue());
+                                kafka_producer_props.setProperty(cEntry.getKey(), cEntry.getValue().toString());
+                            }
                         }
 
                         else if (subEntry.getKey().equalsIgnoreCase("subscribe_topic_patterns")) {
@@ -276,6 +295,16 @@ public class Config {
         kafka_consumer_props.setProperty("max.poll.records", "2000");
         kafka_consumer_props.setProperty("fetch.max.wait.ms", "50");
         kafka_consumer_props.setProperty("auto.offset.reset", "earliest");
+    }
+
+    /*
+     * Default producer properties
+     */
+    private void producerConfigDefaults() {
+        kafka_producer_props.setProperty("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        kafka_producer_props.setProperty("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        kafka_producer_props.setProperty("bootstrap.servers", "localhost:9092");
+        kafka_producer_props.setProperty("client.id", "bgpdata-aggregator-producer");
     }
 
 
@@ -320,12 +349,20 @@ public class Config {
         return kafka_consumer_props;
     }
 
+    Properties getKafka_producer_props() {
+        return kafka_producer_props;
+    }
+
     Set<Pattern> getKafka_topic_patterns() {
         return kafka_topic_patterns;
     }
 
     Integer getTopic_subscribe_delay_millis() {
         return topic_subscribe_delay_millis;
+    }
+
+    Integer getSubscription_timeout_seconds() {
+        return subscription_timeout_seconds;
     }
 
     String getDbHost() { return db_host; }

@@ -21,6 +21,10 @@ import org.bgpdata.api.parsed.processor.BaseAttribute;
 import org.bgpdata.api.parsed.processor.LsNode;
 import org.bgpdata.api.parsed.processor.LsLink;
 import org.bgpdata.api.parsed.processor.LsPrefix;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.bgpdata.psqlquery.*;
 
@@ -64,6 +68,7 @@ public class ConsumerRunnable implements Runnable {
 
 
     private KafkaConsumer<String, String> consumer;
+    private KafkaProducer<String, String> producer;
     private ConsumerRebalanceListener rebalanceListener;
     private Config cfg;
     private PSQLHandler db;
@@ -85,6 +90,7 @@ public class ConsumerRunnable implements Runnable {
     private long ls_node_msg_count;
     private long ls_link_msg_count;
     private long ls_prefix_msg_count;
+    private long subscription_msg_count;
     private long stat_msg_count;
 
     private Collection<TopicPartition> pausedTopics;
@@ -114,6 +120,12 @@ public class ConsumerRunnable implements Runnable {
     private final LinkedBlockingQueue<ConsumerMessageObject> message_queue;
 
     /**
+     * Subscriptions
+     */
+    private Map<String, Long> subscriptions;
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+    /**
      * Constructor
      *
      * @param cfg                  Configuration from cli/config file
@@ -137,6 +149,8 @@ public class ConsumerRunnable implements Runnable {
         pausedTopics = new HashSet<>();
         last_paused_time = 0L;
 
+        this.producer = new KafkaProducer<>(cfg.getKafka_producer_props());
+
         /*
          * It's imperative to first process messages from some topics before subscribing to others.
          *    When connecting to Kafka, topics will be subscribed at an interval.  When the
@@ -154,6 +168,13 @@ public class ConsumerRunnable implements Runnable {
         this.topic_regex_pattern = new StringBuilder();
 
         this.rebalanceListener = new ConsumerRebalanceListener(consumer);
+
+
+        /*
+         * Start the subscription manager
+         */
+        this.subscriptions = new HashMap<>();
+        scheduler.scheduleAtFixedRate(this::cleanup_subscriptions, 30, 30, TimeUnit.SECONDS);
 
         /*
          * Start DB Writer thread - one thread per type
@@ -174,7 +195,7 @@ public class ConsumerRunnable implements Runnable {
     /**
      * Thread safe shutdown
      */
-    synchronized  public void safe_shutdown() {
+    synchronized public void safe_shutdown() {
         nowShutdown = true;
     }
 
@@ -235,6 +256,7 @@ public class ConsumerRunnable implements Runnable {
         running = false;
 
         close_consumer();
+        close_producer();
     }
 
     private void close_consumer() {
@@ -243,6 +265,13 @@ public class ConsumerRunnable implements Runnable {
             consumer = null;
         }
 
+    }
+
+    private void close_producer() {
+        if (producer != null) {
+            producer.close();
+            producer = null;
+        }
     }
 
     /**
@@ -350,11 +379,7 @@ public class ConsumerRunnable implements Runnable {
             if (!topics_all_subscribed) {
                 subscribe_prev_timestamp = subscribe_topics(subscribe_prev_timestamp);
 
-            } /* else if (pausedTopics.size() > 0 && (System.currentTimeMillis() - last_paused_time) > 90000) {
-                logger.info("Resumed paused %d topics", pausedTopics.size());
-                consumer.resume(pausedTopics);
-                pausedTopics.clear();
-            } */
+            }
 
             try {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10));
@@ -510,6 +535,35 @@ public class ConsumerRunnable implements Runnable {
                             UnicastPrefix up = new UnicastPrefix(message.getContent());
                             dbQuery = new UnicastPrefixQuery(up.records);
 
+                            for (UnicastPrefixPojo up_entry : up.records) {
+                                Set<Long> matched = new HashSet<>();
+                            
+                                if (up_entry.getOrigin_asn() != null && subscriptions.containsKey("AS" + up_entry.getOrigin_asn().toString())) {
+                                    matched.add("AS" + up_entry.getOrigin_asn().toString());
+                                }
+                            
+                                String asPath = up_entry.getAs_path();
+                                if (asPath != null) {
+                                    for (String asnStr : asPath.trim().split(" ")) {
+                                        try {
+                                            long asn = Long.parseLong(asnStr);
+                                            if (subscriptions.containsKey("AS" + asn.toString())) {
+                                                matched.add("AS" + asn.toString());
+                                            }
+                                        } catch (NumberFormatException ignored) {}
+                                    }
+                                }
+                            
+                                for (String resource : matched) {
+                                    try {
+                                        producer.send(new ProducerRecord<>("bgpdata.parsed.notification",
+                                            String.format("update\t%s", resource)));
+                                    } catch (Exception e) {
+                                        logger.error("Failed to send update for resource: " + resource, e);
+                                    }
+                                }
+                            }
+                            
                         } else if ((message.getType() != null && message.getType().equalsIgnoreCase("l3vpn"))
                                 || record.topic().equals("bgpdata.parsed.l3vpn")) {
                             logger.trace("Parsing L3VPN prefix message");
@@ -550,6 +604,22 @@ public class ConsumerRunnable implements Runnable {
                             LsPrefix ls = new LsPrefix(message.getContent());
                             dbQuery = new LsPrefixQuery(ls.records);
 
+                        } else if ((message.getType() != null && message.getType().equalsIgnoreCase("subscription"))
+                                || record.topic().equals("bgpdata.parsed.subscription")) {
+                            logger.trace("Parsing subscription message");
+                            subscription_msg_count++;
+
+                            try {
+                                Subscription subscription = new Subscription(message.getContent());
+                                if ("subscribe".equals(subscription.getAction())) {
+                                    String resource = subscription.getResource();
+                                    long expirationTime = System.currentTimeMillis() + (cfg.getSubscription_timeout_seconds() * 1000L);
+                                    subscriptions.put(resource, expirationTime);
+                                    logger.info("Received/Refreshed subscription for resource: " + resource + ". New expiration: " + expirationTime);
+                                }
+                            } catch (Exception e) {
+                                logger.warn("Failed to parse subscription message: " + message.getContent(), e);
+                            }
                         } else {
                             logger.debug("Topic %s not implemented, ignoring", record.topic());
                             continue;
@@ -719,24 +789,7 @@ public class ConsumerRunnable implements Runnable {
             } else {
                 obj.message_count = Long.valueOf(obj.writerQueue.size());
             }
-
-//            if (obj.above_count > cfg.getWriter_allowed_over_queue_times() && obj.assigned.size() > 1) {
-//                congestedThreads = true;
-//            }
-//            else if (obj.above_count <= 0 && obj.writerQueue.size() <= 200) {
-//                lowThreads = true;
-//            }
         }
-
-//        if (congestedThreads && lowThreads) {
-//            logger.info("Rebalancing threads for type " + thread_type);
-//            resetWriters(thread_type);
-//
-//            logger.info("DONE rebalancing threads for type " + thread_type);
-//
-//            last_writer_thread_chg_time = System.currentTimeMillis();
-//            return true;
-//        }
 
         return rebalanced;
     }
@@ -882,22 +935,6 @@ public class ConsumerRunnable implements Runnable {
 
             // Choose and distribute to thread based on thread type
             switch (msg.thread_type) {
-
-// - works well but causes deadlocks and a lot of waiting on shared locks
-//                case THREAD_ATTRIBUTES: {
-//                    /*
-//                     * Order is not needed, choose the least congested thread
-//                     */
-//                    for (WriterObject obj : writers) {
-//                        if (cur_obj == null) {
-//                            cur_obj = obj;
-//
-//                        } else if (obj.writerQueue.size() < cur_obj.writerQueue.size()) {
-//                            cur_obj = obj;
-//                        }
-//                    }
-//                    break;
-//                }
 
                 default: {
                     /*
@@ -1140,6 +1177,10 @@ public class ConsumerRunnable implements Runnable {
 
     public long getLs_prefix_msg_count() {
         return ls_prefix_msg_count;
+    }
+
+    public long getSubscription_msg_count() {
+        return subscription_msg_count;
     }
 
     public long getStat_msg_count() {

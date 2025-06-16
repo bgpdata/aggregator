@@ -7,7 +7,7 @@ ARG VERSION=0.0.0
 COPY . /ws
 WORKDIR /ws
 
-RUN cd /ws/protocol \
+RUN cd /ws/protocol/java \
     && mvn clean install \
     && cd /ws \
     && mvn clean package
