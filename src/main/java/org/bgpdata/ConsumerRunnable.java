@@ -173,7 +173,7 @@ public class ConsumerRunnable implements Runnable {
         /*
          * Start the subscription manager
          */
-        this.subscriptions = new HashMap<>();
+        this.subscriptions = new ConcurrentHashMap<>();
         scheduler.scheduleAtFixedRate(this::cleanup_subscriptions, 30, 30, TimeUnit.SECONDS);
 
         /*
@@ -189,6 +189,28 @@ public class ConsumerRunnable implements Runnable {
             for (int i=0; i < cfg.getWriter_max_threads_per_type(); i++) {
                 addWriterThread(t);
             }
+        }
+    }
+
+    private void cleanup_subscriptions() {
+        try {
+            long now = System.currentTimeMillis();
+            int expired_count = 0;
+
+            for (Iterator<Map.Entry<String, Long>> it = subscriptions.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<String, Long> entry = it.next();
+
+                if (entry.getValue() < now) {
+                    it.remove();
+                    expired_count++;
+                }
+            }
+
+            if (expired_count > 0) {
+                logger.info("Expired %d subscriptions", expired_count);
+            }
+        } catch (Exception e) {
+            logger.error("Error cleaning up subscriptions", e);
         }
     }
 
@@ -536,7 +558,7 @@ public class ConsumerRunnable implements Runnable {
                             dbQuery = new UnicastPrefixQuery(up.records);
 
                             for (UnicastPrefixPojo up_entry : up.records) {
-                                Set<Long> matched = new HashSet<>();
+                                Set<String> matched = new HashSet<>();
                             
                                 if (up_entry.getOrigin_asn() != null && subscriptions.containsKey("AS" + up_entry.getOrigin_asn().toString())) {
                                     matched.add("AS" + up_entry.getOrigin_asn().toString());
@@ -547,8 +569,8 @@ public class ConsumerRunnable implements Runnable {
                                     for (String asnStr : asPath.trim().split(" ")) {
                                         try {
                                             long asn = Long.parseLong(asnStr);
-                                            if (subscriptions.containsKey("AS" + asn.toString())) {
-                                                matched.add("AS" + asn.toString());
+                                            if (subscriptions.containsKey("AS" + Long.toString(asn))) {
+                                                matched.add("AS" + Long.toString(asn));
                                             }
                                         } catch (NumberFormatException ignored) {}
                                     }
